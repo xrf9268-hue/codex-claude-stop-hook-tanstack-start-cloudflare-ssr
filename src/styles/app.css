@@ -149,3 +149,58 @@ code, pre {
   text-align: center;
   padding: 24px;
 }
+
+/* Article / Guide page */
+.article-section + .article-section {
+  margin-top: 20px;
+}
+
+.article-title {
+  margin: 0 0 4px;
+  font-size: 26px;
+}
+
+.article-subtitle {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0 0 12px;
+}
+
+.article-section h2 {
+  color: var(--accent);
+  font-size: 20px;
+}
+
+.article-section h3 {
+  font-size: 16px;
+  margin-top: 16px;
+}
+
+.article-section h4 {
+  font-size: 14px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.article-section p,
+.article-section ol,
+.article-section ul {
+  line-height: 1.75;
+}
+
+.inline-code {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.88em;
+}
+
+.callout {
+  border-left: 3px solid var(--accent);
+  padding: 12px 16px;
+  background: rgba(125, 211, 252, 0.06);
+  border-radius: 0 8px 8px 0;
+  line-height: 1.7;
+}

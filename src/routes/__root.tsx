@@ -44,6 +44,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               <Link activeProps={{ className: 'active-link' }} activeOptions={{ exact: true }} to="/">
                 首页
               </Link>
+              <Link activeProps={{ className: 'active-link' }} to="/guide">
+                指南
+              </Link>
               <a href="/api/health">/api/health</a>
             </nav>
           </header>
