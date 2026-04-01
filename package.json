@@ -1,0 +1,49 @@
+{
+  "name": "codex-claude-stop-hook-tanstack-start-cloudflare-ssr",
+  "private": true,
+  "sideEffects": false,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build && tsc --noEmit",
+    "preview": "vite preview",
+    "deploy": "pnpm run build && wrangler deploy",
+    "cf-typegen": "wrangler types",
+    "postinstall": "pnpm run cf-typegen",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:ci": "vitest run",
+    "test:hook": "node --test internal-tests/*.test.mjs",
+    "check": "pnpm lint && pnpm typecheck && pnpm test:ci"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.0",
+    "@tanstack/react-query-devtools": "^5.90.0",
+    "@tanstack/react-router": "^1.168.10",
+    "@tanstack/react-router-devtools": "^1.166.11",
+    "@tanstack/react-router-ssr-query": "^1.166.10",
+    "@tanstack/react-start": "^1.167.16",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.29.0",
+    "@cloudflare/vitest-pool-workers": "latest",
+    "@eslint/js": "latest",
+    "@types/node": "^22.5.4",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "eslint": "^9.0.0",
+    "eslint-plugin-react-hooks": "latest",
+    "eslint-plugin-react-refresh": "latest",
+    "globals": "latest",
+    "typescript": "^6.0.2",
+    "typescript-eslint": "latest",
+    "vite": "^8.0.0",
+    "vitest": "^4.1.0",
+    "wrangler": "^4.74.0"
+  }
+}
