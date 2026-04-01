@@ -204,3 +204,20 @@ code, pre {
   border-radius: 0 8px 8px 0;
   line-height: 1.7;
 }
+
+.screenshot-figure {
+  margin: 16px 0;
+}
+
+.screenshot {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.screenshot-figure figcaption {
+  margin-top: 8px;
+  font-size: 13px;
+  text-align: center;
+}

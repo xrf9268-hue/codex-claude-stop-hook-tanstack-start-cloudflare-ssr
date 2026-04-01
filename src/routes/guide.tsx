@@ -333,6 +333,20 @@ HEAD at 0e86241 with no tracked edits from that turn to review.`}</pre>
         <pre className="code-block">{`BLOCK: guide page presents edited/inferred review logs
 as literal "real/complete" logs.`}</pre>
         <p>
+          下图是终端中 Review Gate 拦截时的实际输出截图——可以看到 Stop hook
+          反馈的完整 BLOCK 原因，以及随后修复并重新部署的过程：
+        </p>
+        <figure className="screenshot-figure">
+          <img
+            src="/images/review-gate-block-terminal.png"
+            alt="终端截图：Codex Review Gate 返回 BLOCK，提示日志呈现方式不准确，随后修复并重新部署"
+            className="screenshot"
+          />
+          <figcaption className="muted">
+            终端实录：Review Gate 返回 BLOCK 后，Claude 修正文章并重新提交部署
+          </figcaption>
+        </figure>
+        <p>
           这促使我们修正了日志的呈现方式——明确区分原始日志和事后注解。
           这恰好证明了"老师傅复检"的价值：机器质检（lint/typecheck/test）
           不会发现文档准确性问题，但 AI 审查可以。
