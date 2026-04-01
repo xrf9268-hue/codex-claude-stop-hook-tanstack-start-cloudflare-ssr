@@ -1,23 +1,24 @@
 # Claude Code Stop Hook + Codex + TanStack Start + Cloudflare Workers
 
-这是面向 **pnpm + TypeScript + TanStack Start SSR + React Query + Cloudflare Workers + Vitest** 的最小可用模板。
+面向 **pnpm + TypeScript + TanStack Start SSR + React Query + Cloudflare Workers + Vitest** 的最小可用模板。
 
-目标不是做一个大而全的脚手架，而是先把下面三层协作接通：
+核心目标是将三层质量保障机制接通：
 
-1. **TanStack Start SSR** 在 Cloudflare Workers 上运行
-2. **Claude Code Stop hook** 做本地 deterministic gate
-3. **codex-plugin-cc review gate** 在 Claude Code 里接管 Stop 时机的 Codex 审查
+1. **TanStack Start SSR** — 在 Cloudflare Workers 上运行的全栈 React 应用
+2. **Claude Code Stop Hook** — 本地 deterministic gate（lint → typecheck → test）
+3. **Codex Review Gate** — 在 Claude Code 的 Stop 事件中插入 Codex 代码审查
 
-## 这版包含什么
+## 功能概览
 
-- TanStack Start + Cloudflare Vite plugin
-- 自定义 `src/server.ts` Worker 入口
-- TanStack Query SSR 集成
-- 一个可测试的 `/api/health` server route
-- ESLint flat config
-- Cloudflare Workers Vitest 集成
-- Claude Code Stop hook
-- Node 原生测试，验证 hook 阻断逻辑
+- TanStack Start + Cloudflare Vite Plugin 的 SSR Streaming
+- 自定义 `src/server.ts` Worker 入口，导出 `handler.fetch`
+- TanStack Query SSR 集成（`createServerFn` → `queryOptions` → `ensureQueryData` → `useSuspenseQuery`）
+- `/api/health` API 路由（`server.handlers.GET`）
+- ESLint v9 flat config（React Hooks + React Refresh 规则）
+- `@cloudflare/vitest-pool-workers` 集成测试（真实 workerd 环境）
+- Node 原生测试（`node --test`），验证 Stop Hook 阻断逻辑
+- Mermaid 交互式架构图（SSR 数据流、Stop Hook 流程、构建流水线）
+- 自定义域名 `review.aixie.de` 部署
 
 ## 安装
 
@@ -27,72 +28,116 @@ pnpm install
 pnpm cf-typegen
 ```
 
+> `postinstall` 会自动运行 `wrangler types` 生成 `worker-configuration.d.ts`。如果该文件报错，删除后重新执行 `pnpm cf-typegen`。
+
 ## 开发
 
 ```bash
-pnpm dev
+pnpm dev        # Vite dev server on :3000
 ```
 
 ## 质量检查
 
 ```bash
-pnpm lint
-pnpm typecheck
-pnpm test:ci
-pnpm test:hook
+pnpm lint       # ESLint
+pnpm typecheck  # tsc --noEmit
+pnpm test:ci    # Vitest（Cloudflare Workers pool）
+pnpm test:hook  # Node 原生测试（hook 行为验证）
+pnpm check      # 以上全部（lint + typecheck + test:ci）
 ```
 
 ## 部署
 
 ```bash
-pnpm dlx wrangler login
-pnpm deploy
+pnpm dlx wrangler login   # 首次登录
+pnpm deploy               # build + wrangler deploy → review.aixie.de
 ```
 
-## Claude Code + Codex
+## Stop Hook
 
-先安装并启用插件：
+`.claude/hooks/verify-before-stop.mjs` 在 Claude Code 的 `Stop` 事件触发时执行：
+
+1. **递归保护** — 检测 `stop_hook_active`，如为 `true` 则跳过（防止与 Codex Review Gate 循环）
+2. **变更检测** — 通过 `git diff` 获取变更文件列表，仅关注代码和关键配置文件
+3. **跳过条件** — 无代码变更（如仅修改 README）时直接放行
+4. **顺序执行** — `pnpm lint` → `pnpm typecheck` → `pnpm test:ci`
+5. **阻断机制** — 任一步失败输出 `{ "decision": "block", "reason": "..." }`，Claude Code 将继续修复
+
+配置位于 `.claude/settings.local.json`。
+
+## Claude Code + Codex Review Gate
+
+### 安装 Codex 插件
 
 ```text
 /plugin marketplace add openai/codex-plugin-cc
 /plugin install codex@openai-codex
 /reload-plugins
 /codex:setup
-/codex:setup --enable-review-gate
 ```
 
-这份仓库里的 `.claude/settings.local.json` 只负责 **本地 deterministic gate**：
+### 启用 / 禁用 Review Gate
 
-- `pnpm lint`
-- `pnpm typecheck`
-- `pnpm test:ci`
+```text
+/codex:setup --enable-review-gate    # 启用
+/codex:setup --disable-review-gate   # 禁用
+```
 
-Codex review gate 由 `codex-plugin-cc` 自带的 `Stop` hook 提供。
+### 工作机制
 
-## Stop hook 规则
+Codex 插件注册了自己的 `Stop` hook（`stop-review-gate-hook.mjs`），与项目自身的 Stop Hook **并行生效**：
 
-- 只有在代码或关键配置发生变更时才触发
-- 如果只是改 README / 文档，不触发
-- 任一步失败时返回 `decision: block`
-- 检测到 `stop_hook_active` 时直接跳过，避免循环
+- **未启用时**（默认）：hook 检测到 `stopReviewGate: false`，直接跳过
+- **启用后**：hook 调用 `codex-companion.mjs` 发起 Codex review，聚焦于上一轮 Claude 的代码变更
+  - Codex 返回 `ALLOW:` → 放行
+  - Codex 返回 `BLOCK:` → 转换为 `{ "decision": "block" }` 阻止停止
+  - 超时上限 15 分钟
 
-## 为什么还保留 ESLint
+> **注意**：启用 Review Gate 可能导致 Claude / Codex 循环，消耗较多用量。建议仅在主动监控会话时开启。
 
-默认保留 **ESLint**，因为 React / TanStack 规则兼容性最好。
+### 两层 Stop Hook 协作
 
-如果你想试更现代的方案：
+| 层级 | 来源 | 检查内容 | 触发条件 |
+|------|------|----------|----------|
+| Deterministic Gate | `.claude/settings.local.json` | lint + typecheck + test | 代码/配置变更时 |
+| Codex Review Gate | `codex-plugin-cc` 插件 | AI 代码审查 | `stopReviewGate: true` |
 
-- `biome.jsonc.example`
-- `docs/linting-options.md`
+任一层返回 `block`，Claude Code 都会继续当前轮次进行修复。
 
-## 我在当前环境里实际验证过什么
+## ESLint
 
-当前容器无法访问 npm registry，因此我**没有**在这里跑完整的 `pnpm install`、`vite build` 或 `vitest`。
+默认保留 **ESLint**，React / TanStack 规则生态兼容性最佳。
 
-我实际验证的是：
+如需替代方案，参考：
 
-- `node --check .claude/hooks/verify-before-stop.mjs`
-- `node --test internal-tests/*.test.mjs`
-- 目录结构和关键文件存在性检查
+- `biome.jsonc.example` — Biome 配置示例
+- `docs/linting-options.md` — Linter 选型对比
 
-所以这份模板是 **“结构与集成逻辑已校验”** 的版本；真正的框架依赖安装与运行，需要你在有网络的本地环境执行。
+## 项目结构
+
+```
+src/
+├── server.ts                 # Worker 入口（handler.fetch）
+├── router.tsx                # TanStack Router + QueryClient
+├── routeTree.gen.ts          # 自动生成（勿编辑）
+├── routes/
+│   ├── __root.tsx            # 根布局（shellComponent SSR Streaming）
+│   ├── index.tsx             # 首页（SSR 数据 + 架构图）
+│   └── api/health.ts         # API 端点
+├── lib/
+│   ├── runtime.ts            # Cloudflare env 访问
+│   ├── diagrams.ts           # Mermaid 架构图定义
+│   └── queries/runtime-info.ts  # 服务端函数 + Query Options
+├── components/
+│   ├── MermaidChart.tsx       # 客户端 Mermaid 渲染组件
+│   ├── DefaultCatchBoundary.tsx
+│   └── NotFound.tsx
+└── styles/app.css
+
+.claude/
+├── hooks/verify-before-stop.mjs  # Stop Hook
+└── settings.local.json            # Hook 配置
+
+test/                         # Vitest（workerd 环境）
+internal-tests/               # Node 原生测试（hook 验证）
+```
