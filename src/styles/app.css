@@ -120,3 +120,32 @@ code, pre {
 .muted {
   color: var(--muted);
 }
+
+.diagrams-section {
+  margin-top: 32px;
+}
+
+.section-title {
+  margin: 0 0 16px;
+}
+
+.diagram-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.mermaid-container {
+  overflow-x: auto;
+  text-align: center;
+}
+
+.mermaid-container svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.mermaid-placeholder {
+  color: var(--muted);
+  text-align: center;
+  padding: 24px;
+}
