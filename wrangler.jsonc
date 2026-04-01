@@ -9,5 +9,8 @@
   },
   "vars": {
     "MY_VAR": "Hello from Cloudflare"
-  }
+  },
+  "routes": [
+    { "pattern": "review.aixie.de", "custom_domain": true }
+  ]
 }
