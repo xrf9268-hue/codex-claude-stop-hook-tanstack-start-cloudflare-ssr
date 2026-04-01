@@ -223,100 +223,120 @@ $ pnpm test:ci     ✓  (1 file, 3 tests passed)
 
 # 全部通过 → exit 0（放行）`}</pre>
 
-        <h3>Step 6：Layer 2 实际输出（真实 Codex 审查日志）</h3>
+        <h3>Step 6：Layer 2 — Codex 审查日志</h3>
         <p>
-          以下是 Codex Review Gate 实际触发后，从 job 日志文件中提取的完整审查过程。
-          Codex 在本次审查中执行了 <strong>20+ 条命令</strong>，耗时约 5.5 分钟。
+          以下是从 Codex job 日志文件中提取的原始记录，加上中文注解帮助理解。
+          注解用 <code className="inline-code">#</code> 标注，其余为日志原文。
+          完整原始日志存储在：
         </p>
+        <pre className="code-block">{`~/.claude/plugins/data/codex-openai-codex/state/
+  <project-slug>/jobs/<job-id>.log`}</pre>
 
-        <h4>第 1 轮：深度代码审查（~5.5 分钟）</h4>
-        <pre className="code-block">{`[07:35:35] Starting Codex Stop Gate Review.
-[07:35:41] Thread ready. Turn started.
-[07:36:27] Codex error: Reconnecting... 2/5  ← 网络波动自动重连
-[07:37:15] Codex error: Reconnecting... 5/5
+        <h4>第 1 轮：深度代码审查（07:35 ~ 07:41，约 5.5 分钟）</h4>
+        <pre className="code-block">{`# 以下时间戳和消息摘自原始日志，中文注解为事后添加
 
-# ── Codex 开始工作 ──
-[07:37:50] "先确认该回合是否真的产出了可审查的直接编辑"
-           → git status --short
-           → git log --oneline -5
+[07:35:35.564Z] Starting Codex Stop Gate Review.
+[07:35:41.229Z] Thread ready (019d47f8-25be-...).
+[07:35:41.276Z] Turn started (019d47f8-31d9-...).
+[07:36:27.724Z] Codex error: Reconnecting... 2/5
+[07:37:15.443Z] Codex error: Reconnecting... 5/5
 
-[07:38:04] "只看 0e86241 这一个提交，确认有直接编辑"
-           → git show --name-only 0e86241
-           → git show --stat --summary 0e86241
+# Codex 的第一条 assistant message（原文）：
+[07:37:50.530Z] "使用 using-superpowers，先确认该回合是否真的
+  产出了可审查的直接编辑，再只针对那一批改动做 stop-gate review。
+  接下来我会核对最近提交和 diff，而不是把上一条回复本身当作证据。"
 
-# ── 逐文件审查（5 个变更文件） ──
-[07:38:18] → sed -n '1,260p' src/routes/guide.tsx      ← 读文章全文
-           → sed -n '1,240p' src/lib/diagrams.ts        ← 读图表定义
-           → sed -n '1,220p' src/routes/__root.tsx       ← 读导航变更
-           → sed -n '1,260p' src/styles/app.css          ← 读样式变更
-[07:38:26] → sed -n '261,520p' src/routes/guide.tsx     ← 文章太长，继续读
+# Codex 执行的命令（摘选，原始日志记录了每条的 exit code）：
+[07:37:50] git status --short / git log --oneline
+[07:38:04] git show --name-only 0e86241
+[07:38:04] git show --stat --summary 0e86241
+[07:38:18] sed -n '1,260p' src/routes/guide.tsx
+[07:38:18] sed -n '1,240p' src/lib/diagrams.ts
+[07:38:18] sed -n '1,220p' src/routes/__root.tsx
+[07:38:18] sed -n '1,260p' src/styles/app.css
+[07:38:26] sed -n '261,520p' src/routes/guide.tsx
+[07:38:31] sed -n '1,260p' src/routeTree.gen.ts
 
-# ── 交叉验证 ──
-[07:38:41] "确认新增了 /guide 页，不是单纯状态汇报"
-           → sed -n src/components/MermaidChart.tsx       ← 对比组件
-           → sed -n src/routes/index.tsx                  ← 对比首页
-           → cat package.json                             ← 检查依赖
+# 注解：Codex 逐个读取了所有变更文件的完整内容
 
-# ── 搜索关键引用 ──
-[07:38:59] → rg "stopReviewGate|codex-companion|ALLOW|BLOCK"
-           → rg --files | rg "verify-before-stop|settings.local"
+[07:38:41.358Z] "继续收窄范围。我已经确认上一回合对应的是 0e86241，
+  而且确实新增了 /guide 页和相关路由样式，不是单纯状态汇报。
+  现在在看这些具体改动是否引入了会阻止发版的问题。"
 
-# ── 读源码验证文档准确性 ──
-[07:39:09] → sed -n .claude/hooks/verify-before-stop.mjs  ← 核对 hook 源码
-           → sed -n README.md                              ← 核对 README
-           → sed -n internal-tests/verify-before-stop.test.mjs
+[07:38:41] sed -n src/components/MermaidChart.tsx
+[07:38:41] sed -n src/routes/index.tsx
+[07:38:41] cat package.json
+[07:38:59] rg "stopReviewGate|codex-companion|ALLOW|BLOCK"
+[07:39:09] sed -n .claude/hooks/verify-before-stop.mjs
+[07:39:09] sed -n README.md
+[07:39:20] git diff b6c5bfa..0e86241 -- (all changed files)
 
-[07:39:20] → git diff b6c5bfa..0e86241 -- (all changed files)
+# 注解：Codex 自己跑了质检命令
+[07:39:49] pnpm lint       (exit 0)
+[07:39:49] pnpm typecheck  (exit 0)
+[07:39:49] pnpm test:ci    (exit 1, workerd 在 Codex 沙箱中不可用)
 
-# ── Codex 自己跑质检 ──
-[07:39:49] "补一层静态之外的验证"
-           → pnpm lint      ✓
-           → pnpm typecheck ✓
-           → pnpm test:ci   ✗ (workerd 沙箱限制，exit 1)
+[07:41:08.043Z] "lint、typecheck 都过了。测试我没法在只读沙箱里
+  跑完，所以我转去核对文档里最容易出事故的部分：它对外部
+  codex-plugin-cc 行为写了很多实测描述，我要确认这些说法
+  是不是有本地依据。"
 
-# ── 继续核对 ──
-[07:40:37] → vitest.config.ts, test/worker.spec.ts
-
-[07:41:08] "lint、typecheck 都过了。转去核对文档里最容易出事故的部分：
-            它对外部 codex-plugin-cc 行为写了很多实测描述，
-            我要确认这些说法是不是有本地依据。"
-           → rg "stop-review-gate-hook|stopReviewGate|..."
-           → find ~/.claude -name '*stop-review-gate*'`}</pre>
+# 日志在 07:41:10 后无新条目（第 1 轮因超时结束，未输出最终判定）`}</pre>
 
         <div className="callout">
-          <strong>观察：</strong>Codex 不只是走过场——它自主决定了审查策略：
-          先确认提交是否有实质编辑，再逐文件审查，然后交叉验证文档描述与源码的一致性，
-          最后自己跑了一遍 lint/typecheck。这就是"老师傅复检"的价值所在。
+          <strong>观察：</strong>Codex 自主决定了审查策略——
+          先确认提交是否有实质编辑，再逐文件读源码，交叉验证文档描述与实际代码是否一致，
+          最后自己跑了 lint/typecheck。第 1 轮因耗时过长未能在超时前完成判定。
         </div>
 
-        <h4>第 2 轮：快速放行（45 秒）</h4>
+        <h4>第 2 轮：快速放行（07:42 ~ 07:43，45 秒）</h4>
         <p>
-          第 1 轮审查超时后，Claude 的修复轮次没有做新的代码编辑（只是状态汇报），
-          触发第 2 次 Stop。Codex 快速识别出无需审查：
+          第 1 轮超时后，Claude 继续执行但未做新的代码编辑，
+          再次触发 Stop。Codex 这次快速识别出无需审查：
         </p>
-        <pre className="code-block">{`[07:42:37] Starting Codex Stop Gate Review.
-[07:42:39] Thread ready. Turn started.
+        <pre className="code-block">{`# 原始日志（完整，未删减）
 
-[07:42:54] "verify whether the previous turn actually produced edits"
-           → skills/using-superpowers/SKILL.md
+[07:42:37.092Z] Starting Codex Stop Gate Review.
+[07:42:37.519Z] Starting Codex task thread.
+[07:42:39.219Z] Thread ready (019d47fe-8c39-...).
+[07:42:39.269Z] Turn started (019d47fe-92a3-...).
 
-[07:43:10] "checking the repository state now"
-           → git rev-parse --short HEAD   → 0e86241
-           → git status --short           → (clean)
-           → git log -1 --stat --oneline
+[07:42:54.897Z] "Using using-superpowers to load the required workflow,
+  then I'll verify whether the immediately previous Claude turn
+  actually produced edits before doing any review."
 
-[07:43:22] ✅ ALLOW: previous turn was status/reporting only;
-           repo state shows HEAD at 0e86241 with no tracked edits
-           from that turn to review.
+[07:43:10.487Z] git rev-parse --short HEAD  (exit 0)
+[07:43:10.489Z] git status --short          (exit 0)
+[07:43:10.492Z] git log -1 --stat --oneline (exit 0)
 
-[07:43:22] Turn completed. (total: 45s)`}</pre>
+[07:43:22.265Z] ALLOW: previous turn was status/reporting only;
+  repo state shows HEAD at 0e86241 with no tracked edits
+  from that turn to review.
+
+[07:43:22.311Z] Turn completed.
+[07:43:22.341Z] Final output
+ALLOW: previous turn was status/reporting only; repo state shows
+HEAD at 0e86241 with no tracked edits from that turn to review.`}</pre>
 
         <div className="callout">
           <strong>关键设计：</strong>Codex 的 review prompt 要求它只审查
-          "上一轮 Claude 的直接代码编辑"。如果上一轮只是状态汇报、setup 操作、
-          或命令输出（没有实际写代码），Codex 会立即返回 ALLOW，不做无意义的审查。
+          "上一轮 Claude 的直接代码编辑"。如果上一轮只是状态汇报或命令输出
+          （没有实际写代码），Codex 会快速返回 ALLOW。
           这是防止 Claude/Codex 无限循环的核心机制之一。
         </div>
+
+        <h4>Review Gate 也能抓 bug</h4>
+        <p>
+          在编写本文的过程中，Review Gate 实际拦截了一次问题：文章初版将经过编辑注解的日志
+          标称为"真实/完整"日志，Codex 审查后返回了：
+        </p>
+        <pre className="code-block">{`BLOCK: guide page presents edited/inferred review logs
+as literal "real/complete" logs.`}</pre>
+        <p>
+          这促使我们修正了日志的呈现方式——明确区分原始日志和事后注解。
+          这恰好证明了"老师傅复检"的价值：机器质检（lint/typecheck/test）
+          不会发现文档准确性问题，但 AI 审查可以。
+        </p>
       </section>
 
       {/* ── FAQ ── */}
