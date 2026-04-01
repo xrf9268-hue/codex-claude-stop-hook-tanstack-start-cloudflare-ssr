@@ -10,7 +10,6 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "baseUrl": ".",
     "paths": {
       "~/*": ["./src/*"]
     },
@@ -20,8 +19,6 @@
     "src",
     "vite.config.ts",
     "vitest.config.ts",
-    "worker-configuration.d.ts",
-    "test/**/*.ts",
-    "test/**/*.d.ts"
+    "worker-configuration.d.ts"
   ]
 }

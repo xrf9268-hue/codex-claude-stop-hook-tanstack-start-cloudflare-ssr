@@ -4,7 +4,6 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import {
   HeadContent,
   Link,
-  Outlet,
   Scripts,
   createRootRouteWithContext,
 } from '@tanstack/react-router';
@@ -25,16 +24,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   }),
   errorComponent: DefaultCatchBoundary,
   notFoundComponent: NotFound,
-  component: RootComponent,
+  shellComponent: RootDocument,
 });
-
-function RootComponent() {
-  return (
-    <RootDocument>
-      <Outlet />
-    </RootDocument>
-  );
-}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (

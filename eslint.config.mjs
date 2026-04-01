@@ -11,7 +11,8 @@ export default tseslint.config(
       '.wrangler',
       'coverage',
       'src/routeTree.gen.ts',
-      'worker-configuration.d.ts'
+      'worker-configuration.d.ts',
+      'test/env.d.ts'
     ],
   },
   js.configs.recommended,

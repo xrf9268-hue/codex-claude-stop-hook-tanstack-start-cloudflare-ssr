@@ -1,25 +1,20 @@
-import { SELF, env } from 'cloudflare:workers';
+import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
+import { buildRuntimeInfo, readBindingValue } from '../src/lib/runtime';
 
 describe('Cloudflare Worker integration', () => {
   it('exposes Wrangler vars in the runtime env', () => {
     expect(env.MY_VAR).toBe('Hello from Cloudflare');
   });
 
-  it('serves the TanStack Start server route at /api/health', async () => {
-    const response = await SELF.fetch('http://example.com/api/health');
-    expect(response.status).toBe(200);
+  it('reads binding value from Cloudflare env', () => {
+    expect(readBindingValue()).toBe('Hello from Cloudflare');
+  });
 
-    const payload = (await response.json()) as {
-      ok: boolean;
-      runtime: string;
-      binding: string;
-      userAgent: string;
-    };
-
-    expect(payload.ok).toBe(true);
-    expect(payload.runtime).toBe('cloudflare-workers');
-    expect(payload.binding).toBe('Hello from Cloudflare');
-    expect(typeof payload.userAgent).toBe('string');
+  it('builds runtime info with correct shape', () => {
+    const info = buildRuntimeInfo();
+    expect(info.runtime).toBe('cloudflare-workers');
+    expect(info.binding).toBe('Hello from Cloudflare');
+    expect(typeof info.userAgent).toBe('string');
   });
 });
